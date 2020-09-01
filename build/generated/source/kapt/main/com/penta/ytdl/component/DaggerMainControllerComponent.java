@@ -8,6 +8,9 @@ import com.penta.ytdl.repository.CommandRepository_Factory;
 import com.penta.ytdl.viewmodel.MainViewModel;
 import com.penta.ytdl.viewmodel.MainViewModel_Factory;
 import dagger.internal.DoubleCheck;
+import dagger.internal.InstanceFactory;
+import dagger.internal.Preconditions;
+import java.awt.Component;
 import javax.annotation.processing.Generated;
 import javax.inject.Provider;
 
@@ -20,30 +23,29 @@ import javax.inject.Provider;
     "rawtypes"
 })
 public final class DaggerMainControllerComponent implements MainControllerComponent {
+  private Provider<Component> parentProvider;
+
   private Provider<Parser> parserProvider;
 
   private Provider<MainViewModel> mainViewModelProvider;
 
   private Provider<MainController> mainControllerProvider;
 
-  private DaggerMainControllerComponent() {
+  private DaggerMainControllerComponent(Component parentParam) {
 
-    initialize();
+    initialize(parentParam);
   }
 
-  public static Builder builder() {
-    return new Builder();
-  }
-
-  public static MainControllerComponent create() {
-    return new Builder().build();
+  public static MainControllerComponent.Factory factory() {
+    return new Factory();
   }
 
   @SuppressWarnings("unchecked")
-  private void initialize() {
+  private void initialize(final Component parentParam) {
+    this.parentProvider = InstanceFactory.create(parentParam);
     this.parserProvider = DoubleCheck.provider(Parser_Factory.create());
     this.mainViewModelProvider = DoubleCheck.provider(MainViewModel_Factory.create(CommandRepository_Factory.create(), parserProvider));
-    this.mainControllerProvider = DoubleCheck.provider(MainController_Factory.create(mainViewModelProvider));
+    this.mainControllerProvider = DoubleCheck.provider(MainController_Factory.create(parentProvider, mainViewModelProvider));
   }
 
   @Override
@@ -51,12 +53,11 @@ public final class DaggerMainControllerComponent implements MainControllerCompon
     return mainControllerProvider.get();
   }
 
-  public static final class Builder {
-    private Builder() {
-    }
-
-    public MainControllerComponent build() {
-      return new DaggerMainControllerComponent();
+  private static final class Factory implements MainControllerComponent.Factory {
+    @Override
+    public MainControllerComponent create(Component parent) {
+      Preconditions.checkNotNull(parent);
+      return new DaggerMainControllerComponent(parent);
     }
   }
 }

@@ -6,7 +6,7 @@ import javax.swing.UIManager
 class App {
 
     companion object {
-        const val APP_NAME = "Youtube-DL"
+        const val NAME = "Youtube-DL"
 
         @JvmStatic
         fun main(args: Array<String>) {

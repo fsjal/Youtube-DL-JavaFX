@@ -1,16 +1,20 @@
 package com.penta.ytdl.controller
 
-import com.penta.ytdl.component.DaggerLoggerComponent
+import com.penta.ytdl.App
 import com.penta.ytdl.component.DaggerMainViewModelComponent
-import com.penta.ytdl.component.LoggerComponent
 import com.penta.ytdl.component.MainViewModelComponent
 import com.penta.ytdl.domain.Format
 import com.penta.ytdl.domain.Media
+import com.penta.ytdl.resource.Images
 import com.penta.ytdl.util.Dialog
-import com.penta.ytdl.util.databinding.*
+import com.penta.ytdl.util.databinding.DataBinding
+import com.penta.ytdl.util.databinding.JComboBoxDataBinding
 import com.penta.ytdl.view.MainView
 import com.penta.ytdl.viewmodel.MainViewModel
 import kotlinx.coroutines.*
+import java.awt.Component
+import java.awt.Toolkit
+import java.awt.datatransfer.DataFlavor
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -24,24 +28,22 @@ import kotlin.properties.Delegates
 
 @Singleton
 class MainController @Inject constructor(
+        private val parent: Component,
         private val viewModel: MainViewModel
 ) :
         MainView(),
         CoroutineScope by MainScope(),
-        MainViewModelComponent by DaggerMainViewModelComponent.create(),
-        LoggerComponent by DaggerLoggerComponent.create() {
+        MainViewModelComponent by DaggerMainViewModelComponent.create() {
 
-    private val url by DataBinding<String>("text", urlField)
     private val isExtractAudio by DataBinding<Boolean>("isSelected", extractAudioField)
     private val start by DataBinding<Number>("value", startField)
     private val end by DataBinding<Number>("value", endField)
     private val currentFormat by DataBinding<Format>("selectedItem", formatsField)
+    private var url by DataBinding<String>("text", urlField)
     private var formatsList by JComboBoxDataBinding<Format>(formatsField)
     private var formatVisible by DataBinding<Boolean>("isPopupVisible", formatsField)
     private var downloadText by DataBinding<String>("text", downloadButton)
-    private var isDownloadAdded = true
     private var isWorking by Delegates.observable(false) { _, _, value ->
-        if (value) onDownload() else coroutineContext[Job]?.cancelChildren()
         downloadText = if (value) "Stop" else "Download"
     }
     private val model: DefaultTableModel = downloadList.model as DefaultTableModel
@@ -59,7 +61,14 @@ class MainController @Inject constructor(
     }
 
     private fun initWidgets() {
-        downloadButton.addActionListener { onDownload() }
+        urlField.componentPopupMenu = JPopupMenu().apply {
+            add(JMenuItem("Paste", ImageIcon(this@MainController.javaClass.getResource(Images.PASTE)))).apply {
+                addActionListener {
+                    url = Toolkit.getDefaultToolkit().systemClipboard.getData(DataFlavor.stringFlavor) as String
+                }
+            }
+        }
+        downloadButton.addActionListener { if (!isWorking) onDownload() else coroutineContext[Job]?.cancelChildren() }
         startField.model = SpinnerNumberModel(0, 0, Int.MAX_VALUE, 1)
         endField.model = SpinnerNumberModel(0, 0, Int.MAX_VALUE, 1)
         ((startField.editor as JSpinner.NumberEditor).textField.formatter as NumberFormatter).allowsInvalid = false
@@ -89,7 +98,6 @@ class MainController @Inject constructor(
 
     private fun initTable() {
         with(downloadList) {
-            autoCreateRowSorter = true
             model = this@MainController.model.apply {
                 with(Media) { setColumnIdentifiers(arrayOf(NAME, SIZE, SPEED, ETA, PROGRESS)) }
             }
@@ -106,13 +114,7 @@ class MainController @Inject constructor(
     }
 
     private fun initObservers() = with(viewModel) {
-        isNewDownload.observe { if (it) isDownloadAdded = false }
-        name.observe {
-            if (!isDownloadAdded) {
-                isDownloadAdded = true
-                model.addRow(arrayOf(it))
-            }
-        }
+        name.observe { model.addRow(arrayOf(it)) }
         size.observe { model.setValueAt(it, model.rowCount - 1, 1) }
         speed.observe { model.setValueAt(it, model.rowCount - 1, 2) }
         eta.observe { model.setValueAt(it, model.rowCount - 1, 3) }
@@ -122,16 +124,14 @@ class MainController @Inject constructor(
             formatVisible = false
             formatVisible = true
         }
+        error.observe { Dialog.alert(App.NAME, it, JOptionPane.ERROR_MESSAGE, parent) }
     }
 
     private fun onDownload() {
-        println(commandStr)
-
-        Dialog.directoryChooser()?.let {
+        Dialog.directoryChooser(parent) { currentDirectory = File("D:/Downloads") }?.let {
             val command = getCommandComponentFactory().create(commandStr, it).getCommand()
-
-            model.dataVector.removeAllElements()
-            launch(Dispatchers.IO) { viewModel.newDownload(command) }.invokeOnCompletion { isWorking = false }
+            isWorking = true
+            launch(Dispatchers.IO) { viewModel.download(command) }.invokeOnCompletion { isWorking = false }
         }
     }
 

@@ -13,7 +13,7 @@ open class Logger @Inject constructor(private val logger: Logger) {
     init {
         File(FOLDER_NAME).let { if (!it.exists()) it.mkdir() } // create folder
 //        LogManager.getLogManager().reset()
-//        logger.addHandler(FileHandler("$FOLDER_NAME/logs.txt", true).apply { formatter = LogFormatter() })
+        logger.addHandler(FileHandler("$FOLDER_NAME/logs.txt", true).apply { formatter = LogFormatter() })
         logger.addHandler(ConsoleHandler())
         logger.level = Level.FINE
     }

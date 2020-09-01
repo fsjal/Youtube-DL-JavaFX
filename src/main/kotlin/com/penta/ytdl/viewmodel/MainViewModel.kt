@@ -16,7 +16,7 @@ class MainViewModel @Inject constructor(
         private val parser: Parser
 ) {
 
-    val isNewDownload = LiveData(false)
+    val error = LiveData("")
     val name = LiveData("")
     val size = LiveData("")
     val speed = LiveData("")
@@ -24,9 +24,9 @@ class MainViewModel @Inject constructor(
     val progress = LiveData(0)
     val formats = LiveData<List<Format>>(emptyList())
 
-    suspend fun newDownload(command: Command) {
+    suspend fun download(command: Command) {
             repository.run(command).collect {
-                isNewDownload.value = parser.detectDownload(it)
+                parser.error(it)?.let { e -> error.value = e }
                 parser.getName(it)?.let { newName -> name.value = newName }
                 parser.getStats(it)?.let { values ->
                     size.value = values[Media.SIZE] ?: "0.0Kio"
@@ -40,9 +40,7 @@ class MainViewModel @Inject constructor(
     suspend fun getFormats(command: Command) {
         val formats = mutableListOf<Format>()
         repository.run(command).collect {
-            println(it)
             parser.getFormat(it)?.let {
-                println(it)
                 formats += Format(it["code"]!!.toInt(), it["extension"]!!, it["resolution"]!!)
             }
         }

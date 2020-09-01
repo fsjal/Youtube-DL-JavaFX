@@ -1,4 +1,4 @@
-package com.penta.ytdl.entities
+package com.penta.ytdl.entity
 
 import com.penta.ytdl.domain.Media
 import javax.swing.table.TableModel

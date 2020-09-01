@@ -26,6 +26,8 @@ class Parser @Inject constructor() {
 
     fun detectDownload(input: String) = "Downloading.+webpage$".toRegex().find(input) != null
 
+    fun error(input: String) = "ERROR: (.*)".toRegex().find(input)?.groupValues?.get(1)
+
     fun getFormat(input: String) = "(\\d+?)\\s+(.+?)\\s+(.+?)\\s".toRegex().find(input)?.groupValues?.let {
         mapOf(
                 "code" to it[1].trim(),

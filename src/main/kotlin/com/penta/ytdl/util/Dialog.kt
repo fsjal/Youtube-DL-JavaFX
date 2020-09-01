@@ -2,7 +2,6 @@ package com.penta.ytdl.util
 
 import com.penta.ytdl.App
 import java.awt.Component
-import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.JOptionPane.*
 
@@ -32,7 +31,7 @@ object Dialog {
     inline fun directoryChooser(parent: Component? = null, init: JFileChooser.() -> Unit = {}) = JFileChooser()
             .apply(init)
             .run {
-                dialogTitle = App.APP_NAME
+                dialogTitle = App.NAME
                 fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
                 if (showOpenDialog(parent) == JFileChooser.APPROVE_OPTION) selectedFile else null
             }
